@@ -39,6 +39,7 @@
 #include <curses.h>
 #include <signal.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "sl.h"
 
 void add_smoke(int y, int x);
@@ -78,15 +79,22 @@ void option(char *str)
     }
 }
 
+void *play_sound()
+{
+   system("aplay -q iliketrains.wav");
+   return NULL; 
+}
+
 int main(int argc, char *argv[])
 {
     int x, i;
-
+        
     for (i = 1; i < argc; ++i) {
         if (*argv[i] == '-') {
             option(argv[i] + 1);
         }
     }
+    
     initscr();
     signal(SIGINT, SIG_IGN);
     noecho();
@@ -95,6 +103,14 @@ int main(int argc, char *argv[])
     leaveok(stdscr, TRUE);
     scrollok(stdscr, FALSE);
 
+    pthread_t sound_thread;
+    
+    if(pthread_create(&sound_thread, NULL, play_sound, NULL))
+    {
+        fprintf(stderr, "Error creating sound thread\n");
+        return 1;
+    }
+    
     for (x = COLS - 1; ; --x) {
         if (LOGO == 1) {
             if (add_sl(x) == ERR) break;
@@ -110,6 +126,13 @@ int main(int argc, char *argv[])
         usleep(40000);
     }
     mvcur(0, COLS - 1, LINES - 1, 0);
+    
+    if(pthread_join(sound_thread, NULL))
+    {
+        fprintf(stderr, "Error joining sound thread\n");
+        return 2;
+    }
+    
     endwin();
 }
 
